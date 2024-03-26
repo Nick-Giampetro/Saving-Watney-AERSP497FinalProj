@@ -9,8 +9,8 @@ from jax import grad, hessian
 branin_ = lambda x : jnp.array(((x[1] - (5.1*x[0]**2)/(4*jnp.pi**2) + (5*x[0])/jnp.pi - 6)**2 + 10*(1 - 1/(8*jnp.pi))*jnp.cos(x[0]) + 10))
 bounds_branin = np.array([[-5., 0], [10., 15.]])
 
-def 
-    func  = branin_       # function I am minimizing
+def Steepest_Decent_Loop(func) :
+
     gfunc = grad(func)
 
     x0    = np.array([6., 10.]) # starting point
@@ -19,9 +19,6 @@ def
     maxiters = 100         # maximum number of iterations
 
     bounds= bounds_branin # optimization variable bounds
-
-    #for typ in range(3) :
-    typ = 1
     g_inf = 10                                     # starting gradient infinity norm
     k = 0                                          # iteration counter
     xk = x0                                        # starting point
@@ -45,7 +42,7 @@ def
     while g_inf >= eps and k < maxiters:
         gk = gfunc(xk)
         pk = -gk/np.linalg.norm(gk)                # steepest-descent direction
-        sl = Step_Length(func, xk, pk, typ)        # calculate step length
+        sl = Step_Length(func, xk, pk)        # calculate step length
         alpha = sl[0]
         xk = xk + alpha * pk                       # new iterate
         fk = func(xk)                              # evaluate f at new iterate
@@ -61,7 +58,31 @@ def
 
         print(f'iteration {k} ,  function calls: {sl[1]},  alpha: {alpha:1.7f}, xk: {xk.squeeze()}, fk: {fk.item():2.6f}, gradient norm: {g_inf:2.6f}')
 
-        ginf_sd_b_q = ginf_sd_b
-        xk_sd_b_q = xk_sd_b
-        f_sd_b_q = f_sd_b
-        stepDist_sd_q = stepDist_sd_b
+    return [xk_sd_b,ginf_sd_b,f_sd_b]
+
+def Step_Length(func, xk, pk):
+    k = 0
+
+    c1 = 1e-2
+    alpha = 2
+    gfunc = grad(func)
+    while True:
+        k += 1
+        sufDec = ((func(xk + alpha * pk)) < (func(xk) + c1 * alpha * jnp.dot(gfunc(xk), pk)))
+        if sufDec or (alpha < 1e-4):
+            nalpha = alpha
+            break
+
+        C = func(xk)
+        B = -np.linalg.norm(gfunc(xk))
+        alpha_i = xk + alpha * pk
+        A = (func(alpha_i) - B * alpha - C) / (alpha ** 2)
+        nalpha = -B / (2 * A)
+
+        # print(nalpha < 0.3*alpha)
+
+        if nalpha < 0.25 * alpha:
+            nalpha = alpha * .5
+        alpha = nalpha
+
+    return [nalpha, k]
