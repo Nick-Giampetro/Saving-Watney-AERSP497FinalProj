@@ -2,12 +2,18 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 from matplotlib import cm
+import matplotlib as mpl
+import matplotlib.patches as patches
 import jax.numpy as jnp # this is a thin wrapper to NumPy within JAX
 from jax import grad, hessian
+from scipy.optimize import minimize
+from scipy.optimize import Bounds
 
 
 branin_ = lambda x : jnp.array(((x[1] - (5.1*x[0]**2)/(4*jnp.pi**2) + (5*x[0])/jnp.pi - 6)**2 + 10*(1 - 1/(8*jnp.pi))*jnp.cos(x[0]) + 10))
 bounds_branin = np.array([[-5., 0], [10., 15.]])
+
+def Objective_Function(x) :
 
 def Steepest_Decent_Loop(func) :
 
@@ -86,3 +92,4 @@ def Step_Length(func, xk, pk):
         alpha = nalpha
 
     return [nalpha, k]
+
