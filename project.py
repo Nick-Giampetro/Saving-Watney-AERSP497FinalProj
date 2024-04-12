@@ -9,7 +9,6 @@ from jax import grad, hessian
 from scipy.optimize import minimize
 from scipy.optimize import Bounds
 
-
 branin_ = lambda x : jnp.array(((x[1] - (5.1*x[0]**2)/(4*jnp.pi**2) + (5*x[0])/jnp.pi - 6)**2 + 10*(1 - 1/(8*jnp.pi))*jnp.cos(x[0]) + 10))
 bounds_branin = np.array([[-5., 0], [10., 15.]])
 
