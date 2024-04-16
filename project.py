@@ -137,3 +137,43 @@ def Quad_Penalty(func, x0, mu, tau, eta, rho):
 
         print(f'mu: {mu} , tau: {tau}')
     return (ginf_sd_b, xk_sd_b)
+
+
+def SCIPY_SLSQP (f,init,c1,c2,c3) :
+
+    # this will need tailored to our specific problem later
+    x0 = np.array(init)
+    xx = []
+    xx.append(x0)
+    fx = []
+    fx.append(f(x0))
+    c1x = []
+    c1x.append(c1(x0))
+    c2x = []
+    c2x.append(c2(x0))
+    c3x = []
+    c3x.append(c3(x0))
+    c4x = []
+    c4x.append(c4(x0))
+    c5x = []
+    c5x.append(c5(x0))
+    c6x = []
+    c6x.append(c6(x0))
+    c7x = []
+    c7x.append(c7(x0))
+
+    res = minimize(f, x0, method='SLSQP', jac=grad(f),
+                   constraints=[ineq_con1, ineq_con2, eq_con3, ineq_con4, ineq_con5, ineq_con6, ineq_con7],
+                   options={'disp': True},
+                   bounds=bounds, callback=callback)
+
+    xSLSQP = np.zeros((len(fx), 2))
+    fSLSQP = np.zeros((len(fx), 1))
+    cSLSQP = np.zeros((len(fx), 1))
+    for i in range(len(fx)):
+        xSLSQP[i, 0] = np.concatenate(xx)[i * 2]
+        xSLSQP[i, 1] = np.concatenate(xx)[i * 2 + 1]
+        fSLSQP[i] = fx[i]
+        cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), c3x[i] ** 2, max(0, -c4x[i]), max(0, -c5x[i]),
+                        max(0, -c6x[i]), max(0, -c7x[i]))
+    return (xSLSQP,fSLSQP,cSLSQP)
