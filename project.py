@@ -75,6 +75,7 @@ def Steepest_Decent_Loop (func) :
 
     return [xk_sd_b,ginf_sd_b,f_sd_b]
 
+
 def Step_Length_Q (func, xk, pk, mu):
     k = 0
 
@@ -179,7 +180,6 @@ def cob_callback(x):
     print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
 
 
-
 def SCIPY_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
     x0 = init
 
@@ -215,8 +215,7 @@ def SCIPY_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
         xSLSQP[i, 0] = np.concatenate(xx)[i * 2]
         xSLSQP[i, 1] = np.concatenate(xx)[i * 2 + 1]
         fSLSQP[i] = fx[i]
-        cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), c3x[i] ** 2, max(0, -c4x[i]), max(0, -c5x[i]),
-                        max(0, -c6x[i]), max(0, -c7x[i]))
+        cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), c3x[i] ** 2, max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
     return (xSLSQP,fSLSQP,cSLSQP)
 
 def COBYLA_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
@@ -258,8 +257,7 @@ def COBYLA_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
     c7x.append(c7(x0))
 
     res = minimize(f, x0, method='COBYLA',
-                   constraints=[ineq_con1, ineq_con2, ineq_con3a, ineq_con3b, ineq_con4, ineq_con5, ineq_con6,
-                                ineq_con7],
+                   constraints=[ineq_con1, ineq_con2, ineq_con3a, ineq_con3b, ineq_con4, ineq_con5, ineq_con6, ineq_con7],
                    options={'disp': True},
                    bounds=bounds, callback=cob_callback)
 
@@ -270,6 +268,7 @@ def COBYLA_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
         xCOB[i, 0] = np.concatenate(xx)[i * 2]
         xCOB[i, 1] = np.concatenate(xx)[i * 2 + 1]
         fCOB[i] = fx[i]
-        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c3bx[i]), max(0, -c4x[i]),
-                      max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
+        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c3bx[i]), max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
     return (xCOB,fCOB,cCOB)
+
+
