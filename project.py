@@ -149,6 +149,37 @@ def Quad_Penalty (func, x0, mu, tau, eta, rho):
     return (ginf_sd_b, xk_sd_b)
 
 
+def callback(x):
+    xx.append(x)  # iterate xk
+    fx.append(f(x))  # function value
+    c1x.append(ineq_con1['fun'](x))  # constraint evaluation for c1 only
+    c2x.append(ineq_con2['fun'](x))
+    c3x.append(eq_con3['fun'](x))
+    c4x.append(ineq_con4['fun'](x))
+    c5x.append(ineq_con5['fun'](x))
+    c6x.append(ineq_con6['fun'](x))
+    c7x.append(ineq_con7['fun'](x))
+
+    print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
+
+
+def cob_callback(x):
+    xx.append(x)  # iterate xk
+    fx.append(f(x))  # function value
+    c1x.append(ineq_con1['fun'](x))  # constraint evaluation for c1 only
+    c2x.append(ineq_con2['fun'](x))
+    c3x.append(eq_con3['fun'](x))
+    c3ax.append(ineq_con3a['fun'](x))
+    c3bx.append(ineq_con3b['fun'](x))
+    c4x.append(ineq_con4['fun'](x))
+    c5x.append(ineq_con5['fun'](x))
+    c6x.append(ineq_con6['fun'](x))
+    c7x.append(ineq_con7['fun'](x))
+
+    print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
+
+
+
 def SCIPY_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
     x0 = init
 
@@ -241,3 +272,4 @@ def COBYLA_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
         fCOB[i] = fx[i]
         cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c3bx[i]), max(0, -c4x[i]),
                       max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
+    return (xCOB,fCOB,cCOB)
