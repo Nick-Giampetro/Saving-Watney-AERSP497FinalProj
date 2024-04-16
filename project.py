@@ -12,9 +12,19 @@ from scipy.optimize import Bounds
 branin_ = lambda x : jnp.array(((x[1] - (5.1*x[0]**2)/(4*jnp.pi**2) + (5*x[0])/jnp.pi - 6)**2 + 10*(1 - 1/(8*jnp.pi))*jnp.cos(x[0]) + 10))
 bounds_branin = np.array([[-5., 0], [10., 15.]])
 
-def Objective_Function(x) :
+c1 = lambda x: (x[0] - 3)**2 + (x[1] +6)**2 - 225
+c2 = lambda x: (x[0] + 10)**2 + (x[1] +5)**2 - 300
+c3 = lambda x: x[0] + 15/8 * x[1] - 85/4 # equality constraint
+c4 = lambda x: -x[0] + 10
+c5 = lambda x: x[0] + 5
+c6 = lambda x: x[1]
+c7 = lambda x: -x[1] + 15
 
-def Steepest_Decent_Loop(func) :
+bounds = Bounds([-5., 0], [10., 15.])
+
+def Objective_Function (x) :
+
+def Steepest_Decent_Loop (func) :
 
     gfunc = grad(func)
 
@@ -65,7 +75,7 @@ def Steepest_Decent_Loop(func) :
 
     return [xk_sd_b,ginf_sd_b,f_sd_b]
 
-def Step_Length_Q(func, xk, pk, mu):
+def Step_Length_Q (func, xk, pk, mu):
     k = 0
 
     c1 = 1e-3
@@ -86,7 +96,7 @@ def Step_Length_Q(func, xk, pk, mu):
     return [alpha, k]
 
 
-def Quad_Penalty(func, x0, mu, tau, eta, rho):
+def Quad_Penalty (func, x0, mu, tau, eta, rho):
     gfunc = grad(func)
 
     maxiters = 250  # maximum number of iterations
@@ -139,10 +149,10 @@ def Quad_Penalty(func, x0, mu, tau, eta, rho):
     return (ginf_sd_b, xk_sd_b)
 
 
-def SCIPY_SLSQP (f,init,c1,c2,c3) :
+def SCIPY_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
+    x0 = init
 
     # this will need tailored to our specific problem later
-    x0 = np.array(init)
     xx = []
     xx.append(x0)
     fx = []
@@ -177,3 +187,57 @@ def SCIPY_SLSQP (f,init,c1,c2,c3) :
         cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), c3x[i] ** 2, max(0, -c4x[i]), max(0, -c5x[i]),
                         max(0, -c6x[i]), max(0, -c7x[i]))
     return (xSLSQP,fSLSQP,cSLSQP)
+
+def COBYLA_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
+    x0 = init
+
+    c3a = lambda x: x[0] + 15 / 8 * x[1] - (85 / 4 - 1 / 25)
+    c3b = lambda x: - x[0] - 15 / 8 * x[1] + (85 / 4 + 1 / 25)
+
+    ineq_con3a = {'type': 'ineq',
+                  'fun': c3a,
+                  'jac': grad(c3a)}
+
+    ineq_con3b = {'type': 'ineq',
+                  'fun': c3b,
+                  'jac': grad(c3b)}
+
+    # this will need tailored to our specific problem later
+    xx = []
+    xx.append(x0)
+    fx = []
+    fx.append(f(x0))
+    c1x = []
+    c1x.append(c1(x0))
+    c2x = []
+    c2x.append(c2(x0))
+    c3x = []
+    c3x.append(c3(x0))
+    c3ax = []
+    c3ax.append(c3a(x0))
+    c3bx = []
+    c3bx.append(c3b(x0))
+    c4x = []
+    c4x.append(c4(x0))
+    c5x = []
+    c5x.append(c5(x0))
+    c6x = []
+    c6x.append(c6(x0))
+    c7x = []
+    c7x.append(c7(x0))
+
+    res = minimize(f, x0, method='COBYLA',
+                   constraints=[ineq_con1, ineq_con2, ineq_con3a, ineq_con3b, ineq_con4, ineq_con5, ineq_con6,
+                                ineq_con7],
+                   options={'disp': True},
+                   bounds=bounds, callback=cob_callback)
+
+    xCOB = np.zeros((len(fx), 2))
+    fCOB = np.zeros((len(fx), 1))
+    cCOB = np.zeros((len(fx), 1))
+    for i in range(len(fx)):
+        xCOB[i, 0] = np.concatenate(xx)[i * 2]
+        xCOB[i, 1] = np.concatenate(xx)[i * 2 + 1]
+        fCOB[i] = fx[i]
+        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c3bx[i]), max(0, -c4x[i]),
+                      max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
