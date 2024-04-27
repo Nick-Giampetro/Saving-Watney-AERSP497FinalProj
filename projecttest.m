@@ -1,6 +1,8 @@
 %% AERSP 597 - Project
 
-
+% delvi < 6.25
+% delv > 0
+% -90 < phi < 90
 
 [mc, mf, tf, ti] = totalfun(3, 0);
 
