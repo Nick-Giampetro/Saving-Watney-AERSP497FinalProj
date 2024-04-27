@@ -4,9 +4,17 @@
 
 [mc, mf, tf, ti] = totalfun(3, 0);
 
+% delVi in km/s
+% phi in rad
+% mtotal, mstruct in kg
+% vex in km/s
+% modify vex, mtotal, and mstruct below
+
 function [mc, mf, tf, ti] = totalfun(delVi, phi)
 
     [delth, delt, delV2] = transfer(delVi, phi);
+
+    % 11520 = Mar 12, 2035
     t0 = 11520 * 24 * 3600;
     wE = 2*pi/(365 * 24 * 3600 + 6 * 3600 + 9 * 60);
     wM = 2*pi/(687 * 24 * 3600);
