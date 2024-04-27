@@ -249,3 +249,4 @@ def SCIPY_COBYLA (f,init) :
 
 [xCOB, fCOB, cCOB] = SCIPY_COBYLA(branin_, np.array([6.0, 10.0]))
 
+[xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(branin_pen, np.array([6.0, 10.0]), 0.001, 1, 0.5, 2)
