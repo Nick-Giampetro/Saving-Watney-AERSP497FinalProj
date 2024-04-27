@@ -100,7 +100,7 @@ elseif e > 1
 end
 
 
-Ft = sqrt(muS)/(rE * p) * (dot(r0, v0)/sqrt(muS) * (1 - cos(dtheta)) - sqrt(p) * sin(dtheta));
+Ft = dot(r0, v0)/(p * rE) * ( 1 - cos(dtheta)) - 1/rE * sqrt(muS/p) * (sin(dtheta));
 Gt = 1 - rE/p * (1 - cos(dtheta));
 
 v2 = [Ft(1) * r0 + Gt(1) * v0, Ft(2) * r0 + Gt(2) * v0];
