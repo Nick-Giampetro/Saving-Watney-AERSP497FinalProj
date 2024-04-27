@@ -137,6 +137,7 @@ def Quad_Penalty (func, x0, mu, tau, eta, rho):
 
 
 def SCIPY_SLSQP (f,init) :
+    gk = grad(f)
     def callback(x):
         xx.append(x)  # iterate xk
         fx.append(f(x))  # function value
@@ -172,7 +173,7 @@ def SCIPY_SLSQP (f,init) :
     c7x = []
     c7x.append(c7(x0))
 
-    res = minimize(f, x0, method='SLSQP', jac=grad(f),
+    res = minimize(f, x0, method='SLSQP', jac=gk,
                    constraints=[ineq_con1, ineq_con2, eq_con3, ineq_con4, ineq_con5, ineq_con6, ineq_con7],
                    options={'disp': True},
                    bounds=bounds_branin, callback=callback)
@@ -180,14 +181,18 @@ def SCIPY_SLSQP (f,init) :
     xSLSQP = np.zeros((len(fx), 2))
     fSLSQP = np.zeros((len(fx), 1))
     cSLSQP = np.zeros((len(fx), 1))
+    gSLSQP = np.zeros((len(fx), 1))
     for i in range(len(fx)):
         xSLSQP[i, 0] = np.concatenate(xx)[i * 2]
         xSLSQP[i, 1] = np.concatenate(xx)[i * 2 + 1]
+        gSLSQP[i] = np.linalg.norm(gk(xSLSQP[i, :]))
         fSLSQP[i] = fx[i]
         cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), c3x[i] ** 2, max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
-    return xSLSQP, fSLSQP, cSLSQP
+    return xSLSQP, fSLSQP, gSLSQP, cSLSQP
 
 def SCIPY_COBYLA (f,init) :
+    gk = grad(f)
+
     def cob_callback(x):
         xx.append(x)  # iterate xk
         fx.append(f(x))  # function value
@@ -237,16 +242,16 @@ def SCIPY_COBYLA (f,init) :
     xCOB = np.zeros((len(fx), 2))
     fCOB = np.zeros((len(fx), 1))
     cCOB = np.zeros((len(fx), 1))
+    gCOB = np.zeros((len(fx), 1))
     for i in range(len(fx)):
         xCOB[i, 0] = np.concatenate(xx)[i * 2]
         xCOB[i, 1] = np.concatenate(xx)[i * 2 + 1]
+        gCOB[i] = np.linalg.norm(gk(xCOB[i, :]))
         fCOB[i] = fx[i]
         cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c3ax[i]), max(0, -c3bx[i]), max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
-    return xCOB, fCOB, cCOB
+    return xCOB, fCOB, gCOB, cCOB
 
 
-[xSLSQP, fSLSQP, cSLSQP] = SCIPY_SLSQP(branin_, np.array([6.0, 10.0]))
-
-[xCOB, fCOB, cCOB] = SCIPY_COBYLA(branin_, np.array([6.0, 10.0]))
-
+[xSLSQP, fSLSQP, gSLSQP, cSLSQP] = SCIPY_SLSQP(branin_, np.array([6.0, 10.0]))
+[xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(branin_, np.array([6.0, 10.0]))
 [xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(branin_pen, np.array([6.0, 10.0]), 0.001, 1, 0.5, 2)
