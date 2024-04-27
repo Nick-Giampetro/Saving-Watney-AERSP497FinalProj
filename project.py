@@ -20,60 +20,45 @@ c5 = lambda x: x[0] + 5
 c6 = lambda x: x[1]
 c7 = lambda x: -x[1] + 15
 
-bounds = Bounds([-5., 0], [10., 15.])
+c3a = lambda x: x[0] + 15 / 8 * x[1] - (85 / 4 - 1 / 25)
+c3b = lambda x: - x[0] - 15 / 8 * x[1] + (85 / 4 + 1 / 25)
 
-def Objective_Function (x) :
+def branin_pen(x,mu) :
+    return branin_(x) + mu/2 * c3(x)**2 + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c4(x))**2)
 
-def Steepest_Decent_Loop (func) :
+ineq_con1 = {'type': 'ineq',
+             'fun': c1,
+             'jac': grad(c1)}
+ineq_con2 = {'type': 'ineq',
+             'fun': c2,
+             'jac': grad(c2)}
+eq_con3 = {'type': 'eq',
+           'fun': c3,
+           'jac': grad(c3)}
+ineq_con4 = {'type': 'ineq',
+             'fun': c4,
+             'jac': grad(c4)}
+ineq_con5 = {'type': 'ineq',
+             'fun': c5,
+             'jac': grad(c5)}
+ineq_con6 = {'type': 'ineq',
+             'fun': c6,
+             'jac': grad(c6)}
+ineq_con7 = {'type': 'ineq',
+             'fun': c7,
+             'jac': grad(c7)}
 
-    gfunc = grad(func)
-
-    x0    = np.array([6., 10.]) # starting point
-
-    eps   = 1e-3          # tolerance for convergence
-    maxiters = 100         # maximum number of iterations
-
-    bounds= bounds_branin # optimization variable bounds
-    g_inf = 10                                     # starting gradient infinity norm
-    k = 0                                          # iteration counter
-    xk = x0                                        # starting point
-    fk    = func(xk)
-
-    # empty lists to store optimization history
-    ginf_sd_b = []        # first-order optimality
-    ginf_sd_b.append(np.linalg.norm(gfunc(x0), ord=np.inf))
-    xk_sd_b = []          # iterate history
-    xk_sd_b.append(x0)    # include the starting point
-    ncalls_sd_b = []      # number of function calls
-    f_sd_b      = []      # objective history
-    f_sd_b.append(fk)
-    stepDist_sd_b = []
-    stepDist_sd_b.append(2)
-
-    np.set_printoptions(precision=3)
-    print(f'starting point x0: {xk}, f0: {fk}')
-    print('----------------------------------')
-
-    while g_inf >= eps and k < maxiters:
-        gk = gfunc(xk)
-        pk = -gk/np.linalg.norm(gk)                # steepest-descent direction
-        sl = Step_Length(func, xk, pk)        # calculate step length
-        alpha = sl[0]
-        xk = xk + alpha * pk                       # new iterate
-        fk = func(xk)                              # evaluate f at new iterate
-        g_inf = np.linalg.norm(gk, ord=np.inf)     # check first-order optimality (gradient)
-
-        k += 1
-        ncalls_sd_b.append(sl[1])
-        ginf_sd_b.append(g_inf)
-        xk_sd_b.append(xk)
-        f_sd_b.append(fk)
-        stepDist_sd_b.append(alpha)
+ineq_con3a = {'type': 'ineq',
+              'fun': c3a,
+              'jac': grad(c3a)}
+ineq_con3b = {'type': 'ineq',
+              'fun': c3b,
+              'jac': grad(c3b)}
 
 
-        print(f'iteration {k} ,  function calls: {sl[1]},  alpha: {alpha:1.7f}, xk: {xk.squeeze()}, fk: {fk.item():2.6f}, gradient norm: {g_inf:2.6f}')
 
-    return [xk_sd_b,ginf_sd_b,f_sd_b]
+# def Objective_Function (x) :
+
 
 
 def Step_Length_Q (func, xk, pk, mu):
@@ -110,13 +95,14 @@ def Quad_Penalty (func, x0, mu, tau, eta, rho):
     fk = func(xk, mu)
 
     # empty lists to store optimization history
-    ginf_sd_b = []  # first-order optimality
-    ginf_sd_b.append(g_inf)
-    xk_sd_b = []  # iterate history
-    xk_sd_b.append(x0)  # include the starting point
-    ncalls_sd_b = []  # number of function calls
-    f_sd_b = []  # objective history
-    f_sd_b.append(fk)
+    gQPen = []  # first-order optimality
+    gQPen.append(g_inf)
+    xQPen = []  # iterate history
+    xQPen.append(x0)  # include the starting point
+    fQPen = []  # objective history
+    fQPen.append(fk)
+    cQPen = []
+    cQPen.append(max(max(0, -c1(x0)), max(0, -c2(x0)), c3(x0) ** 2, max(0, -c4(x0)), max(0, -c5(x0)), max(0, -c6(x0)), max(0, -c7(x0))))
 
     np.set_printoptions(precision=3)
     print(f'starting point x0: {xk}, f0: {fk}')
@@ -135,10 +121,10 @@ def Quad_Penalty (func, x0, mu, tau, eta, rho):
             g_inf = np.linalg.norm(gk, ord=np.inf)  # check first-order optimality (gradient)
 
             k += 1
-            ncalls_sd_b.append(sl[1])
-            ginf_sd_b.append(g_inf)
-            xk_sd_b.append(xk)
-            f_sd_b.append(fk)
+            gQPen.append(g_inf)
+            xQPen.append(xk)
+            fQPen.append(fk)
+            cQPen.append(max(max(0, -c1(xk)), max(0, -c2(xk)), c3(xk) ** 2, max(0, -c4(xk)), max(0, -c5(xk)), max(0, -c6(xk)), max(0, -c7(xk))))
 
             print(
                 f'iteration {k} ,  function calls: {sl[1]},  alpha: {alpha:1.7f}, xk: {xk.squeeze()}, fk: {fk.item():2.6f}, gradient norm: {g_inf:2.6f}')
@@ -147,40 +133,23 @@ def Quad_Penalty (func, x0, mu, tau, eta, rho):
         tau = tau * eta
 
         print(f'mu: {mu} , tau: {tau}')
-    return (ginf_sd_b, xk_sd_b)
+    return xQPen, fQPen, gQPen, cQPen
 
 
-def callback(x):
-    xx.append(x)  # iterate xk
-    fx.append(f(x))  # function value
-    c1x.append(ineq_con1['fun'](x))  # constraint evaluation for c1 only
-    c2x.append(ineq_con2['fun'](x))
-    c3x.append(eq_con3['fun'](x))
-    c4x.append(ineq_con4['fun'](x))
-    c5x.append(ineq_con5['fun'](x))
-    c6x.append(ineq_con6['fun'](x))
-    c7x.append(ineq_con7['fun'](x))
+def SCIPY_SLSQP (f,init) :
+    def callback(x):
+        xx.append(x)  # iterate xk
+        fx.append(f(x))  # function value
+        c1x.append(ineq_con1['fun'](x))  # constraint evaluation for c1 only
+        c2x.append(ineq_con2['fun'](x))
+        c3x.append(eq_con3['fun'](x))
+        c4x.append(ineq_con4['fun'](x))
+        c5x.append(ineq_con5['fun'](x))
+        c6x.append(ineq_con6['fun'](x))
+        c7x.append(ineq_con7['fun'](x))
 
-    print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
+        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
 
-
-def cob_callback(x):
-    xx.append(x)  # iterate xk
-    fx.append(f(x))  # function value
-    c1x.append(ineq_con1['fun'](x))  # constraint evaluation for c1 only
-    c2x.append(ineq_con2['fun'](x))
-    c3x.append(eq_con3['fun'](x))
-    c3ax.append(ineq_con3a['fun'](x))
-    c3bx.append(ineq_con3b['fun'](x))
-    c4x.append(ineq_con4['fun'](x))
-    c5x.append(ineq_con5['fun'](x))
-    c6x.append(ineq_con6['fun'](x))
-    c7x.append(ineq_con7['fun'](x))
-
-    print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
-
-
-def SCIPY_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
     x0 = init
 
     # this will need tailored to our specific problem later
@@ -206,7 +175,7 @@ def SCIPY_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
     res = minimize(f, x0, method='SLSQP', jac=grad(f),
                    constraints=[ineq_con1, ineq_con2, eq_con3, ineq_con4, ineq_con5, ineq_con6, ineq_con7],
                    options={'disp': True},
-                   bounds=bounds, callback=callback)
+                   bounds=bounds_branin, callback=callback)
 
     xSLSQP = np.zeros((len(fx), 2))
     fSLSQP = np.zeros((len(fx), 1))
@@ -216,21 +185,25 @@ def SCIPY_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
         xSLSQP[i, 1] = np.concatenate(xx)[i * 2 + 1]
         fSLSQP[i] = fx[i]
         cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), c3x[i] ** 2, max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
-    return (xSLSQP,fSLSQP,cSLSQP)
+    return xSLSQP, fSLSQP, cSLSQP
 
-def COBYLA_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
+def SCIPY_COBYLA (f,init) :
+    def cob_callback(x):
+        xx.append(x)  # iterate xk
+        fx.append(f(x))  # function value
+        c1x.append(ineq_con1['fun'](x))
+        c2x.append(ineq_con2['fun'](x))
+        c3x.append(eq_con3['fun'](x))
+        c3ax.append(ineq_con3a['fun'](x))
+        c3bx.append(ineq_con3b['fun'](x))
+        c4x.append(ineq_con4['fun'](x))
+        c5x.append(ineq_con5['fun'](x))
+        c6x.append(ineq_con6['fun'](x))
+        c7x.append(ineq_con7['fun'](x))
+
+        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
+
     x0 = init
-
-    c3a = lambda x: x[0] + 15 / 8 * x[1] - (85 / 4 - 1 / 25)
-    c3b = lambda x: - x[0] - 15 / 8 * x[1] + (85 / 4 + 1 / 25)
-
-    ineq_con3a = {'type': 'ineq',
-                  'fun': c3a,
-                  'jac': grad(c3a)}
-
-    ineq_con3b = {'type': 'ineq',
-                  'fun': c3b,
-                  'jac': grad(c3b)}
 
     # this will need tailored to our specific problem later
     xx = []
@@ -259,7 +232,7 @@ def COBYLA_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
     res = minimize(f, x0, method='COBYLA',
                    constraints=[ineq_con1, ineq_con2, ineq_con3a, ineq_con3b, ineq_con4, ineq_con5, ineq_con6, ineq_con7],
                    options={'disp': True},
-                   bounds=bounds, callback=cob_callback)
+                   bounds=bounds_branin, callback=cob_callback)
 
     xCOB = np.zeros((len(fx), 2))
     fCOB = np.zeros((len(fx), 1))
@@ -268,7 +241,11 @@ def COBYLA_SLSQP (f,init,c1,c2,c3,c4,c5,c6,c7) :
         xCOB[i, 0] = np.concatenate(xx)[i * 2]
         xCOB[i, 1] = np.concatenate(xx)[i * 2 + 1]
         fCOB[i] = fx[i]
-        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c3bx[i]), max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
-    return (xCOB,fCOB,cCOB)
+        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c3ax[i]), max(0, -c3bx[i]), max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
+    return xCOB, fCOB, cCOB
 
+
+[xSLSQP, fSLSQP, cSLSQP] = SCIPY_SLSQP(branin_, np.array([6.0, 10.0]))
+
+[xCOB, fCOB, cCOB] = SCIPY_COBYLA(branin_, np.array([6.0, 10.0]))
 
