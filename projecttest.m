@@ -1,10 +1,14 @@
 %% AERSP 597 - Project
 
+clc
+close all
+clear all
+
 % delvi < 6.25
 % delv > 0
 % -90 < phi < 90
 
-[mc, mf, tf, ti] = totalfun(3, 0);
+[mc, mf, tf, ti] = totalfun(3, 0.2);
 
 % delVi in km/s
 % phi in rad
@@ -75,16 +79,16 @@ e = sqrt(1 - p/a);
 % Uses the orbit equation (with a sign check) to find true anomaly
 thetai = acos(p/(vecnorm(r0)*e) - 1/e)* sign(dot(r0, v0));
 
-thetaf = [1, -1] * acos(p/(rM*e) - 1/e);
+thetaf = acos(p/(rM*e) - 1/e);
 
 dtheta = thetaf - thetai;
 
-for i = 1:length(dtheta)
-    while dtheta(i) < 0
-        dtheta(i) = dtheta(i) + 2 * pi;
-        thetaf(i) = thetaf(i) + 2 * pi;
-    end
-end
+% for i = 1:length(dtheta)
+%     while dtheta(i) < 0
+%         dtheta(i) = dtheta(i) + 2 * pi;
+%         thetaf(i) = thetaf(i) + 2 * pi;
+%     end
+% end
 
 if e < 1
     E1 = 2*atan(sqrt((1-e)/(1+e)) * tan(thetai/2));
@@ -105,10 +109,10 @@ end
 Ft = dot(r0, v0)/(p * rE) * ( 1 - cos(dtheta)) - 1/rE * sqrt(muS/p) * (sin(dtheta));
 Gt = 1 - rE/p * (1 - cos(dtheta));
 
-v2 = [Ft(1) * r0 + Gt(1) * v0, Ft(2) * r0 + Gt(2) * v0];
+% v2 = [Ft(1) * r0 + Gt(1) * v0, Ft(2) * r0 + Gt(2) * v0];
+v2 = Ft * r0 + Gt * v0;
 
 vM = [-vM*sin(dtheta); vM*cos(dtheta)];
-
 delV2 = vecnorm(vM - v2);
 
 end

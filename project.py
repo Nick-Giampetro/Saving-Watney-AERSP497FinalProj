@@ -23,7 +23,7 @@ c7 = lambda x: -x[1] + 15
 c3a = lambda x: x[0] + 15 / 8 * x[1] - (85 / 4 - 1 / 25)
 c3b = lambda x: - x[0] - 15 / 8 * x[1] + (85 / 4 + 1 / 25)
 
-def branin_pen(x,mu) :
+def branin_pen(x,mu):
     return branin_(x) + mu/2 * c3(x)**2 + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c4(x))**2)
 
 ineq_con1 = {'type': 'ineq',
@@ -55,9 +55,33 @@ ineq_con3b = {'type': 'ineq',
               'fun': c3b,
               'jac': grad(c3b)}
 
+def TransferCalc (delVi,phi) :
+    rE = 149.95e6
+    rM = 228e6
+    muS = 1.327e11
 
+    vE = (muS / rE)**0.5
+    vE = (muS / rM) ** 0.5
 
-# def Objective_Function (x) :
+    r0 = np.array([rE, 0])
+    v0 = np.array([delVi*np.sin(phi), vE + delVi*np.cos(phi)])
+
+    E = np.linalg.norm(v0)**2 / 2 - muS / rE
+    a = -muS / (2 * E)
+
+    hvec = np.cross([r0,0],[v0,0])
+    hmag = np.linalg.norm(hvec)
+
+    p = hmag**2 / muS
+    e = (1 - p/a)**0.5
+
+    thetai = np.arccos(p/(np.linalg.norm(r0)*e) - 1/e) * np.sign(np.dot(r0, v0))
+
+    thetaf = np.arccos(p/)
+
+    dtheta = thetaf - thetai ;
+
+def Objective_Function (x) :
 
 
 
@@ -237,7 +261,7 @@ def SCIPY_COBYLA (f,init) :
     res = minimize(f, x0, method='COBYLA',
                    constraints=[ineq_con1, ineq_con2, ineq_con3a, ineq_con3b, ineq_con4, ineq_con5, ineq_con6, ineq_con7],
                    options={'disp': True},
-                   bounds=bounds_branin, callback=cob_callback)
+                   callback=cob_callback)
 
     xCOB = np.zeros((len(fx), 2))
     fCOB = np.zeros((len(fx), 1))
@@ -273,4 +297,30 @@ plt.xlabel('optimization iteration (k)')
 plt.ylabel(r'$ ||\nabla $$f(x_k)||$')
 plt.title(r'$ ||\nabla $$f(x_k)||$ vs iterations')
 plt.legend()
+
+plt.figure(figsize=(8,8))
+plt.xlabel(r'$x_1$')
+plt.ylabel(r'$x_2$')
+plt.title(r'Trajectory Plot')
+
+xxSLSQP = np.zeros((len(xSLSQP), 2))
+for i in range(len(xSLSQP)):
+    xxSLSQP[i,0] = np.concatenate(xSLSQP)[i*2]
+    xxSLSQP[i,1] = np.concatenate(xSLSQP)[i*2 + 1]
+
+xxCOB = np.zeros((len(xCOB), 2))
+for i in range(len(xCOB)):
+    xxCOB[i, 0] = np.concatenate(xCOB)[i*2]
+    xxCOB[i, 1] = np.concatenate(xCOB)[i*2 + 1]
+
+xxQPen = np.zeros((len(xQPen), 2))
+for i in range(len(xQPen)):
+    xxQPen[i, 0] = np.concatenate(xQPen)[i*2]
+    xxQPen[i, 1] = np.concatenate(xQPen)[i*2 + 1]
+
+plt.plot(xxSLSQP[:, 0], xxSLSQP[:, 1], marker='o', label='SLSQP (SciPy)')
+plt.plot(xxCOB[:, 0], xxCOB[:, 1], marker='o', label='COBYLA (SciPy)')
+plt.plot(xxQPen[:, 0], xxQPen[:, 1], marker='o', label='Quadratic Penalty (Personal)')
+plt.legend()
+
 plt.show()
