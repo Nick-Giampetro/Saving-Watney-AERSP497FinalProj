@@ -248,10 +248,28 @@ def SCIPY_COBYLA (f,init) :
         xCOB[i, 1] = np.concatenate(xx)[i * 2 + 1]
         gCOB[i] = np.linalg.norm(gk(xCOB[i, :]))
         fCOB[i] = fx[i]
-        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c3ax[i]), max(0, -c3bx[i]), max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
+        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]), max(0, -c5x[i]), max(0, -c6x[i]), max(0, -c7x[i]))
     return xCOB, fCOB, gCOB, cCOB
 
 
 [xSLSQP, fSLSQP, gSLSQP, cSLSQP] = SCIPY_SLSQP(branin_, np.array([6.0, 10.0]))
 [xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(branin_, np.array([6.0, 10.0]))
 [xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(branin_pen, np.array([6.0, 10.0]), 0.001, 1, 0.5, 2)
+
+plt.figure(figsize=(8,8))
+plt.plot(cSLSQP, marker='o', label = 'SLSQP (SciPy)')
+plt.plot(cCOB, marker='o', label = 'COBYLA (SciPy)')
+plt.plot(cQPen, marker='o', label = 'Quadratic Penalty (Personal)')
+plt.xlabel('optimization iteration (k)')
+plt.ylabel('Maximum Constraint Violation (MCV)')
+plt.title('MCV vs iterations')
+plt.legend()
+
+plt.figure(figsize=(8,8))
+plt.plot(gSLSQP, marker='o', label = 'SLSQP (SciPy)')
+plt.plot(gCOB, marker='o', label = 'COBYLA (SciPy)')
+plt.plot(gQPen, marker='o', label = 'Quadratic Penalty (Personal)')
+plt.xlabel('optimization iteration (k)')
+plt.ylabel(r'$ ||\nabla $$f(x_k)||$')
+plt.title(r'$ ||\nabla $$f(x_k)||$ vs iterations')
+plt.legend()
