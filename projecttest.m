@@ -5,10 +5,13 @@ close all
 clear all
 
 % delvi < 6.25
-% delv > 0
+% delvi > 0
 % -90 < phi < 90
 
-[mc, mf, tf, ti] = totalfun(3, 0.2);
+[~, mf, tf, ti] = totalfun(3, -0.21);
+
+tf = tf / 3600 ; % hours
+ti = ti / 3600 ; % hours
 
 % delVi in km/s
 % phi in rad
@@ -32,12 +35,12 @@ function [mc, mf, tf, ti] = totalfun(delVi, phi)
     tf = (delth - theta0)/dw - wM/dw * delt + delt;
     ti = tf - delt;
 
-    for i = 1:length(ti)
-        while ti(i) < 0
-            tf(i) = tf(i) - 2*pi/dw;
-            ti(i) = ti(i) - 2*pi/dw;
-        end
-    end
+%     for i = 1:length(ti)
+%         while ti(i) < 0
+%             tf(i) = tf(i) - 2*pi/dw;
+%             ti(i) = ti(i) - 2*pi/dw;
+%         end
+%     end
     
     delV = delVi + delV2;
 
@@ -90,20 +93,20 @@ dtheta = thetaf - thetai;
 %     end
 % end
 
-if e < 1
+% if e < 1
     E1 = 2*atan(sqrt((1-e)/(1+e)) * tan(thetai/2));
     E2 = 2*atan(sqrt((1-e)/(1+e)) * tan(thetaf/2));
 
     dM = E2 - E1 + e*sin(E1) - e*sin(E2);
     dt = sqrt(a^3/muS) * dM;
-
-elseif e > 1
-    H1 = 2 * atanh(sqrt((e - 1)/(e + 1)) * tan(thetai/2));
-    H2 = 2 * atanh(sqrt((e - 1)/(e + 1)) * tan(thetaf/2));
-
-    dM = e*sinh(H2) - H2 - e*sinh(H1) + H1;
-    dt = sqrt(-a^3/muS) * dM;
-end
+% 
+% elseif e > 1
+%     H1 = 2 * atanh(sqrt((e - 1)/(e + 1)) * tan(thetai/2));
+%     H2 = 2 * atanh(sqrt((e - 1)/(e + 1)) * tan(thetaf/2));
+% 
+%     dM = e*sinh(H2) - H2 - e*sinh(H1) + H1;
+%     dt = sqrt(-a^3/muS) * dM;
+% end
 
 
 Ft = dot(r0, v0)/(p * rE) * ( 1 - cos(dtheta)) - 1/rE * sqrt(muS/p) * (sin(dtheta));

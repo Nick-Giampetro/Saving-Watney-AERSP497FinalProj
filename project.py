@@ -9,80 +9,78 @@ from jax import grad, hessian
 from scipy.optimize import minimize
 from scipy.optimize import Bounds
 
-branin_ = lambda x : jnp.array(((x[1] - (5.1*x[0]**2)/(4*jnp.pi**2) + (5*x[0])/jnp.pi - 6)**2 + 10*(1 - 1/(8*jnp.pi))*jnp.cos(x[0]) + 10))
-bounds_branin = np.array([[-5., 0], [10., 15.]])
-
-c1 = lambda x: (x[0] - 3)**2 + (x[1] +6)**2 - 225
-c2 = lambda x: (x[0] + 10)**2 + (x[1] +5)**2 - 300
-c3 = lambda x: x[0] + 15/8 * x[1] - 85/4 # equality constraint
-c4 = lambda x: -x[0] + 10
-c5 = lambda x: x[0] + 5
-c6 = lambda x: x[1]
-c7 = lambda x: -x[1] + 15
-
-c3a = lambda x: x[0] + 15 / 8 * x[1] - (85 / 4 - 1 / 25)
-c3b = lambda x: - x[0] - 15 / 8 * x[1] + (85 / 4 + 1 / 25)
-
-def branin_pen(x,mu):
-    return branin_(x) + mu/2 * c3(x)**2 + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c4(x))**2)
-
-ineq_con1 = {'type': 'ineq',
-             'fun': c1,
-             'jac': grad(c1)}
-ineq_con2 = {'type': 'ineq',
-             'fun': c2,
-             'jac': grad(c2)}
-eq_con3 = {'type': 'eq',
-           'fun': c3,
-           'jac': grad(c3)}
-ineq_con4 = {'type': 'ineq',
-             'fun': c4,
-             'jac': grad(c4)}
-ineq_con5 = {'type': 'ineq',
-             'fun': c5,
-             'jac': grad(c5)}
-ineq_con6 = {'type': 'ineq',
-             'fun': c6,
-             'jac': grad(c6)}
-ineq_con7 = {'type': 'ineq',
-             'fun': c7,
-             'jac': grad(c7)}
-
-ineq_con3a = {'type': 'ineq',
-              'fun': c3a,
-              'jac': grad(c3a)}
-ineq_con3b = {'type': 'ineq',
-              'fun': c3b,
-              'jac': grad(c3b)}
-
 def TransferCalc (delVi,phi) :
     rE = 149.95e6
     rM = 228e6
     muS = 1.327e11
 
     vE = (muS / rE)**0.5
-    vE = (muS / rM) ** 0.5
+    vM = (muS / rM) ** 0.5
+    r0 = jnp.array([rE, 0])
+    v0 = jnp.array([delVi*np.sin(phi), vE + delVi*jnp.cos(phi)])
 
-    r0 = np.array([rE, 0])
-    v0 = np.array([delVi*np.sin(phi), vE + delVi*np.cos(phi)])
-
-    E = np.linalg.norm(v0)**2 / 2 - muS / rE
+    E = jnp.linalg.norm(v0)**2 / 2 - muS / rE
     a = -muS / (2 * E)
 
-    hvec = np.cross([r0,0],[v0,0])
-    hmag = np.linalg.norm(hvec)
+    hvec = jnp.cross([r0,0],[v0,0])
+    hmag = jnp.linalg.norm(hvec)
 
     p = hmag**2 / muS
     e = (1 - p/a)**0.5
 
-    thetai = np.arccos(p/(np.linalg.norm(r0)*e) - 1/e) * np.sign(np.dot(r0, v0))
+    thetai = jnp.arccos(p/(jnp.linalg.norm(r0)*e) - 1/e) * jnp.sign(jnp.dot(r0, v0))
 
-    thetaf = np.arccos(p/)
+    thetaf = jnp.arccos(p/(rM*e) - 1/e)
 
-    dtheta = thetaf - thetai ;
+    dtheta = thetaf - thetai
+
+    E1 = 2*jnp.arctan(((1-e)/(1+e))**0.5 * jnp.arctan(thetai/2))
+    E2 = 2*jnp.arctan(((1-e)/(1+e))**0.5 * jnp.arctan(thetaf/2))
+
+    dM = E2 - E1 + e*jnp.sin(E1) - e*jnp.sin(E2)
+    dt = (a^3/muS)**0.5 * dM
+
+    Ft = jnp.dot(r0, v0) / (p * rE) * (1 - jnp.cos(dtheta)) - 1 / rE * (muS / p)**0.5 * jnp.sin(dtheta)
+    Gt = 1 - rE / p * (1 - jnp.cos(dtheta))
+
+    v2 = Ft * r0 + Gt * v0
+
+    vM = jnp.array([-vM*jnp.sin(dtheta), vM*jnp.cos(dtheta)])
+    delV2 = jnp.linalg.norm(vM - v2)
+
+    return dtheta, dt, delV2
+
+def totalFun (delVi, phi) :
+    mtotal = 6000
+    vex = 4.5126
+    mstruct = 1000
+
+    [delth, delt, delV2] = TransferCalc(delVi, phi)
+
+    # 11520 = Mar 12, 2035
+    t0 = 11520 * 24 * 3600
+    wE = 2*jnp.pi/(365 * 24 * 3600 + 6 * 3600 + 9 * 60)
+    wM = 2*jnp.pi/(687 * 24 * 3600)
+
+    dw = wM - wE
+
+    theta0 = (dw * t0) % (2 * jnp.pi)
+
+    tf = (delth - theta0) / dw - wM / dw * delt + delt
+    ti = tf - delt
+
+    delV = delVi + delV2
+
+    mc = mtotal * jnp.e**(-delV / vex) - mstruct
+    mf = mtotal - mstruct - mc
+
+    return mf, tf
 
 def Objective_Function (x) :
-
+    [mf, tf] = totalFun (x[0], x[1])
+    w1 = 0.5
+    w2 = 1-w1
+    return w1*mf + w2*tf
 
 
 def Step_Length_Q (func, xk, pk, mu):
