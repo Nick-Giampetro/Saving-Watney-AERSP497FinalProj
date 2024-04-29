@@ -11,7 +11,7 @@ from scipy.optimize import Bounds
 
 
 c1 = lambda x: -x[0] + 6.25
-c2 = lambda x:  x
+c2 = lambda x:  x[0]
 c3 = lambda x: -x[1] + np.pi/2
 c4 = lambda x:  x[1] + np.pi/2
 
@@ -29,7 +29,7 @@ ineq_con4 = {'type': 'ineq',
              'fun': c4,
              'jac': grad(c4)}
 
-def TransferCalc (delVi,phi) :
+def TransferCalc (x) :
     rE = 149.95e6
     rM = 228.e6
     muS = 1.327e11
@@ -37,7 +37,7 @@ def TransferCalc (delVi,phi) :
     vE = (muS / rE) ** 0.5
     vM = (muS / rM) ** 0.5
     r0 = jnp.array([rE, 0, 0])
-    v0 = jnp.array([delVi*jnp.sin(phi), vE + delVi*jnp.cos(phi), 0])
+    v0 = jnp.array([x[0]*jnp.sin(x[1]), vE + x[0]*jnp.cos(x[1]), 0])
 
     E = jnp.linalg.norm(v0)**2 / 2 - muS / rE
     a = -muS / (2 * E)
@@ -71,17 +71,17 @@ def TransferCalc (delVi,phi) :
 
     return dtheta, dt, delV2
 
-def totalFun (delVi, phi) :
+def totalFun (x) :
     mtotal = 6000.
     vex = 4.5126
     mstruct = 1000.
 
-    [delth, delt, delV2] = TransferCalc(delVi, phi)
+    [delth, delt, delV2] = TransferCalc(x)
 
     # 11520 = Mar 12, 2035
-    t0 = 11520 * 24 * 3600
-    wE = 2*jnp.pi/(365 * 24 * 3600 + 6 * 3600 + 9 * 60)
-    wM = 2*jnp.pi/(687 * 24 * 3600)
+    t0 = 11520. * 24. * 3600.
+    wE = 2.*jnp.pi/(365 * 24 * 3600 + 6 * 3600 + 9 * 60)
+    wM = 2.*jnp.pi/(687 * 24 * 3600)
 
     dw = wM - wE
 
@@ -91,18 +91,19 @@ def totalFun (delVi, phi) :
     ti = tf - delt
     tf = tf /3600.
 
-    delV = delVi + delV2
+    delV = x[0] + delV2
 
     mc = mtotal * jnp.e**(-delV / vex) - mstruct
     mf = mtotal - mstruct - mc
 
-    return mf, tf
+    return [mf, tf]
 
 def Objective_Function (x) :
-    [mf, tf] = totalFun(x[0], x[1])
+    obj = totalFun(x)
     w1 = 0.5
     w2 = 1-w1
-    return w1*mf + w2*tf
+    score = (w1 * obj[0] + w2 * obj[1])
+    return score
 
 def Obj_pen(x,mu):
     return Objective_Function(x) + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c3(x))**2 + max(0, -c4(x))**2)
@@ -128,7 +129,7 @@ def Step_Length_Q (func, xk, pk, mu):
     return [alpha, k]
 
 
-def Quad_Penalty (func, x0, mu, tau, eta, rho):
+def Quad_Penalty (func, gObj, x0, mu, tau, eta, rho):
     gfunc = grad(func)
 
     maxiters = 250  # maximum number of iterations
@@ -167,7 +168,7 @@ def Quad_Penalty (func, x0, mu, tau, eta, rho):
             g_inf = np.linalg.norm(gk, ord=np.inf)  # check first-order optimality (gradient)
 
             k += 1
-            gQPen.append(g_inf)
+            gQPen.append(np.linalg.norm(gObj))
             xQPen.append(xk)
             fQPen.append(fk)
             cQPen.append(max(max(0, -c1(xk)), max(0, -c2(xk)), max(0, -c3[i]), max(0, -c4(xk))))
@@ -182,8 +183,7 @@ def Quad_Penalty (func, x0, mu, tau, eta, rho):
     return xQPen, fQPen, gQPen, cQPen
 
 
-def SCIPY_SLSQP (f,init) :
-    gk = grad(f)
+def SCIPY_SLSQP (f,x0, gk) :
     def callback(x):
         xx.append(x)  # iterate xk
         fx.append(f(x))  # function value
@@ -192,8 +192,6 @@ def SCIPY_SLSQP (f,init) :
         c3x.append(ineq_con3['fun'](x))
         c4x.append(ineq_con4['fun'](x))
         print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}, c4 {c4(x):1.7f}')
-
-    x0 = init
 
     # this will need tailored to our specific problem later
     xx = []
@@ -227,9 +225,7 @@ def SCIPY_SLSQP (f,init) :
         cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]))
     return xSLSQP, fSLSQP, gSLSQP, cSLSQP
 
-def SCIPY_COBYLA (f,init) :
-    gk = grad(f)
-
+def SCIPY_COBYLA (f,x0, gk) :
     def cob_callback(x):
         xx.append(x)  # iterate xk
         fx.append(f(x))  # function value
@@ -238,8 +234,6 @@ def SCIPY_COBYLA (f,init) :
         c3x.append(ineq_con3['fun'](x))
         c4x.append(ineq_con4['fun'](x))
         print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}, c4 {c4(x):1.7f}')
-
-    x0 = init
 
     # this will need tailored to our specific problem later
     xx = []
@@ -281,9 +275,9 @@ print(res)
 gObj = grad(Objective_Function)
 print(gObj(init))
 
-[xSLSQP, fSLSQP, gSLSQP, cSLSQP] = SCIPY_SLSQP(Objective_Function, init)
-[xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(Objective_Function, init)
-[xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(Objective_Function, init, 0.001, 1, 0.5, 2)
+[xSLSQP, fSLSQP, gSLSQP, cSLSQP] = SCIPY_SLSQP(Objective_Function, init, gObj)
+[xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(Objective_Function, init, gObj)
+[xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(Obj_pen, gObj, init, 0.001, 1, 0.5, 2)
 
 plt.figure(figsize=(8,8))
 plt.plot(cSLSQP, marker='o', label = 'SLSQP (SciPy)')
