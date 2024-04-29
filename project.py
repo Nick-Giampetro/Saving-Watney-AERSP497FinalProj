@@ -12,8 +12,8 @@ from scipy.optimize import Bounds
 
 c1 = lambda x: -x[0] + 6.25
 c2 = lambda x:  x
-c3 = lambda x: -x[1] + jnp.pi/2
-c4 = lambda x:  x[1] + jnp.pi/2
+c3 = lambda x: -x[1] + np.pi/2
+c4 = lambda x:  x[1] + np.pi/2
 
 
 ineq_con1 = {'type': 'ineq',
@@ -31,24 +31,24 @@ ineq_con4 = {'type': 'ineq',
 
 def TransferCalc (delVi,phi) :
     rE = 149.95e6
-    rM = 228e6
+    rM = 228.e6
     muS = 1.327e11
 
-    vE = (muS / rE)**0.5
+    vE = (muS / rE) ** 0.5
     vM = (muS / rM) ** 0.5
     r0 = jnp.array([rE, 0, 0])
-    v0 = jnp.array([delVi*np.sin(phi), vE + delVi*jnp.cos(phi), 0])
+    v0 = jnp.array([delVi*jnp.sin(phi), vE + delVi*jnp.cos(phi), 0])
 
     E = jnp.linalg.norm(v0)**2 / 2 - muS / rE
     a = -muS / (2 * E)
 
-    hvec = jnp.cross(r0,v0)
+    hvec = jnp.cross(r0, v0)
     hmag = jnp.linalg.norm(hvec)
 
     p = hmag**2 / muS
     e = (1 - p/a)**0.5
 
-    thetai = jnp.arccos(p/(jnp.linalg.norm(r0)*e) - 1/e) * jnp.sign(jnp.dot(r0, v0))
+    thetai = jnp.arccos(min(1., p/(jnp.linalg.norm(r0)*e) - 1/e)) * jnp.sign(jnp.dot(r0, v0))
 
     thetaf = jnp.arccos(p/(rM*e) - 1/e)
 
@@ -68,12 +68,13 @@ def TransferCalc (delVi,phi) :
     vM = jnp.array([-vM*jnp.sin(dtheta), vM*jnp.cos(dtheta), 0])
     delV2 = jnp.linalg.norm(vM - v2)
 
+
     return dtheta, dt, delV2
 
 def totalFun (delVi, phi) :
-    mtotal = 6000
+    mtotal = 6000.
     vex = 4.5126
-    mstruct = 1000
+    mstruct = 1000.
 
     [delth, delt, delV2] = TransferCalc(delVi, phi)
 
@@ -88,6 +89,7 @@ def totalFun (delVi, phi) :
 
     tf = (delth - theta0) / dw - wM / dw * delt + delt
     ti = tf - delt
+    tf = tf /3600.
 
     delV = delVi + delV2
 
@@ -98,7 +100,6 @@ def totalFun (delVi, phi) :
 
 def Objective_Function (x) :
     [mf, tf] = totalFun(x[0], x[1])
-    print(mf, tf)
     w1 = 0.5
     w2 = 1-w1
     return w1*mf + w2*tf
@@ -169,7 +170,7 @@ def Quad_Penalty (func, x0, mu, tau, eta, rho):
             gQPen.append(g_inf)
             xQPen.append(xk)
             fQPen.append(fk)
-            cQPen.append(max(max(0, -c1(xk)), max(0, -c2(xk)), c3(xk) ** 2, max(0, -c4(xk))))
+            cQPen.append(max(max(0, -c1(xk)), max(0, -c2(xk)), max(0, -c3[i]), max(0, -c4(xk))))
 
             print(
                 f'iteration {k} ,  function calls: {sl[1]},  alpha: {alpha:1.7f}, xk: {xk.squeeze()}, fk: {fk.item():2.6f}, gradient norm: {g_inf:2.6f}')
@@ -189,7 +190,8 @@ def SCIPY_SLSQP (f,init) :
         c1x.append(ineq_con1['fun'](x))  # constraint evaluation for c1 only
         c2x.append(ineq_con2['fun'](x))
         c3x.append(ineq_con3['fun'](x))
-        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
+        c4x.append(ineq_con4['fun'](x))
+        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}, c4 {c4(x):1.7f}')
 
     x0 = init
 
@@ -222,7 +224,7 @@ def SCIPY_SLSQP (f,init) :
         xSLSQP[i, 1] = np.concatenate(xx)[i * 2 + 1]
         gSLSQP[i] = np.linalg.norm(gk(xSLSQP[i, :]))
         fSLSQP[i] = fx[i]
-        cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), c3x[i] ** 2, max(0, -c4x[i]))
+        cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]))
     return xSLSQP, fSLSQP, gSLSQP, cSLSQP
 
 def SCIPY_COBYLA (f,init) :
@@ -234,9 +236,8 @@ def SCIPY_COBYLA (f,init) :
         c1x.append(ineq_con1['fun'](x))  # constraint evaluation for c1 only
         c2x.append(ineq_con2['fun'](x))
         c3x.append(ineq_con3['fun'](x))
-        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
-
-        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}')
+        c4x.append(ineq_con4['fun'](x))
+        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}, c4 {c4(x):1.7f}')
 
     x0 = init
 
@@ -271,57 +272,60 @@ def SCIPY_COBYLA (f,init) :
         cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]))
     return xCOB, fCOB, gCOB, cCOB
 
-init = np.array([3,0])
+init = np.array([3.,0.])
 print(init)
 
 res = Objective_Function(init)
 print(res)
 
-# [xSLSQP, fSLSQP, gSLSQP, cSLSQP] = SCIPY_SLSQP(Objective_Function, np.array(init))
-# [xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(Objective_Function, np.array(init))
-# [xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(Objective_Function, np.array(init), 0.001, 1, 0.5, 2)
-#
-# plt.figure(figsize=(8,8))
-# plt.plot(cSLSQP, marker='o', label = 'SLSQP (SciPy)')
-# plt.plot(cCOB, marker='o', label = 'COBYLA (SciPy)')
-# plt.plot(cQPen, marker='o', label = 'Quadratic Penalty (Personal)')
-# plt.xlabel('optimization iteration (k)')
-# plt.ylabel('Maximum Constraint Violation (MCV)')
-# plt.title('MCV vs iterations')
-# plt.legend()
-#
-# plt.figure(figsize=(8,8))
-# plt.plot(gSLSQP, marker='o', label = 'SLSQP (SciPy)')
-# plt.plot(gCOB, marker='o', label = 'COBYLA (SciPy)')
-# plt.plot(gQPen, marker='o', label = 'Quadratic Penalty (Personal)')
-# plt.xlabel('optimization iteration (k)')
-# plt.ylabel(r'$ ||\nabla $$f(x_k)||$')
-# plt.title(r'$ ||\nabla $$f(x_k)||$ vs iterations')
-# plt.legend()
-#
-# plt.figure(figsize=(8,8))
-# plt.xlabel(r'$x_1$')
-# plt.ylabel(r'$x_2$')
-# plt.title(r'Trajectory Plot')
-#
-# xxSLSQP = np.zeros((len(xSLSQP), 2))
-# for i in range(len(xSLSQP)):
-#     xxSLSQP[i,0] = np.concatenate(xSLSQP)[i*2]
-#     xxSLSQP[i,1] = np.concatenate(xSLSQP)[i*2 + 1]
-#
-# xxCOB = np.zeros((len(xCOB), 2))
-# for i in range(len(xCOB)):
-#     xxCOB[i, 0] = np.concatenate(xCOB)[i*2]
-#     xxCOB[i, 1] = np.concatenate(xCOB)[i*2 + 1]
-#
-# xxQPen = np.zeros((len(xQPen), 2))
-# for i in range(len(xQPen)):
-#     xxQPen[i, 0] = np.concatenate(xQPen)[i*2]
-#     xxQPen[i, 1] = np.concatenate(xQPen)[i*2 + 1]
-#
-# plt.plot(xxSLSQP[:, 0], xxSLSQP[:, 1], marker='o', label='SLSQP (SciPy)')
-# plt.plot(xxCOB[:, 0], xxCOB[:, 1], marker='o', label='COBYLA (SciPy)')
-# plt.plot(xxQPen[:, 0], xxQPen[:, 1], marker='o', label='Quadratic Penalty (Personal)')
-# plt.legend()
-#
-# plt.show()
+gObj = grad(Objective_Function)
+print(gObj(init))
+
+[xSLSQP, fSLSQP, gSLSQP, cSLSQP] = SCIPY_SLSQP(Objective_Function, init)
+[xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(Objective_Function, init)
+[xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(Objective_Function, init, 0.001, 1, 0.5, 2)
+
+plt.figure(figsize=(8,8))
+plt.plot(cSLSQP, marker='o', label = 'SLSQP (SciPy)')
+plt.plot(cCOB, marker='o', label = 'COBYLA (SciPy)')
+plt.plot(cQPen, marker='o', label = 'Quadratic Penalty (Personal)')
+plt.xlabel('optimization iteration (k)')
+plt.ylabel('Maximum Constraint Violation (MCV)')
+plt.title('MCV vs iterations')
+plt.legend()
+
+plt.figure(figsize=(8,8))
+plt.plot(gSLSQP, marker='o', label = 'SLSQP (SciPy)')
+plt.plot(gCOB, marker='o', label = 'COBYLA (SciPy)')
+plt.plot(gQPen, marker='o', label = 'Quadratic Penalty (Personal)')
+plt.xlabel('optimization iteration (k)')
+plt.ylabel(r'$ ||\nabla $$f(x_k)||$')
+plt.title(r'$ ||\nabla $$f(x_k)||$ vs iterations')
+plt.legend()
+
+plt.figure(figsize=(8,8))
+plt.xlabel(r'$x_1$')
+plt.ylabel(r'$x_2$')
+plt.title(r'Trajectory Plot')
+
+xxSLSQP = np.zeros((len(xSLSQP), 2))
+for i in range(len(xSLSQP)):
+    xxSLSQP[i,0] = np.concatenate(xSLSQP)[i*2]
+    xxSLSQP[i,1] = np.concatenate(xSLSQP)[i*2 + 1]
+
+xxCOB = np.zeros((len(xCOB), 2))
+for i in range(len(xCOB)):
+    xxCOB[i, 0] = np.concatenate(xCOB)[i*2]
+    xxCOB[i, 1] = np.concatenate(xCOB)[i*2 + 1]
+
+xxQPen = np.zeros((len(xQPen), 2))
+for i in range(len(xQPen)):
+    xxQPen[i, 0] = np.concatenate(xQPen)[i*2]
+    xxQPen[i, 1] = np.concatenate(xQPen)[i*2 + 1]
+
+plt.plot(xxSLSQP[:, 0], xxSLSQP[:, 1], marker='o', label='SLSQP (SciPy)')
+plt.plot(xxCOB[:, 0], xxCOB[:, 1], marker='o', label='COBYLA (SciPy)')
+plt.plot(xxQPen[:, 0], xxQPen[:, 1], marker='o', label='Quadratic Penalty (Personal)')
+plt.legend()
+
+plt.show()
