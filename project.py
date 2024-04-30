@@ -1,9 +1,5 @@
 import numpy as np
-import torch
 import matplotlib.pyplot as plt
-from matplotlib import cm
-import matplotlib as mpl
-import matplotlib.patches as patches
 import jax.numpy as jnp # this is a thin wrapper to NumPy within JAX
 from jax import grad, hessian
 from scipy.optimize import minimize
