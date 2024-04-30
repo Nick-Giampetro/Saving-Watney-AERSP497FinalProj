@@ -122,117 +122,9 @@ def Objective_Function (x) :
     return score
 
 
-def Obj_pen(x,mu):
-    return Objective_Function(x) + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c3(x))**2 + max(0, -c4(x))**2 + max(0, -c4(x))**2)
-
-
 def Obj_pen_NM(x):
-    mu = 20
-    return Objective_Function(x) + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c3(x))**2 + max(0, -c4(x))**2 + max(0, -c4(x))**2)
-
-def Step_Length_Q (func, xk, pk, mu):
-    k = 0
-
-    c1 = 1e-5
-    alpha = 1
-    gfunc = grad(func)
-
-    xt = np.zeros(2)
-    xt[0] = xk[0] + alpha * pk[0]
-    xt[1] = xk[1] + alpha * pk[1]
-    fs = False
-    while True:
-        k += 1
-
-        sufDec = ((func(xk + alpha * pk, mu)) < (func(xk, mu) + c1 * alpha * jnp.dot(gfunc(xk, mu), pk)))
-        if sufDec or (alpha < 1e-3):
-            break
-
-        C = func(xk, mu)
-        B = -np.linalg.norm(gfunc(xk, mu))
-        alpha_i = xk + alpha * pk
-        A = (func(alpha_i, mu) - B * alpha - C) / (alpha ** 2)
-        alpha = -B / (2 * A)
-
-        print(xt)
-
-        xt[0] = xk[0] + alpha * pk[0]
-        xt[1] = xk[1] + alpha * pk[1]
-
-        if xt[0] > 6.25:
-            xt[0] = 6.25
-            fs = True
-        elif xt[0] < 3.6:
-            xt[0] = 3.6
-            fs = True
-        else:
-            xt[0] = xt[0]
-
-        if xt[1] > 0.5:
-            xt[1] = 0.5
-            fs = True
-        elif xt[1] < np.pi/6:
-            xt[1] = np.pi/6
-            fs = True
-        else:
-            xt[1] = xt[1]
-
-        if fs:
-            break
-
-    return [xt, alpha, k]
-
-
-def Quad_Penalty (func, gObj, x0, mu, tau, eta, rho):
-    gfunc = grad(func)
-
-    maxiters = 250  # maximum number of iterations
-
-    g_inf = np.linalg.norm(gfunc(x0, mu), ord=np.inf)  # starting gradient infinity norm
-    k = 0  # iteration counter
-    xk = x0  # starting point
-    fk = func(xk, mu)
-
-    # empty lists to store optimization history
-    gQPen = []  # first-order optimality
-    gQPen.append(g_inf)
-    xQPen = []  # iterate history
-    xQPen.append(x0)  # include the starting point
-    fQPen = []  # objective history
-    fQPen.append(fk)
-    cQPen = []
-    cQPen.append(max(max(0, -c1(x0)), max(0, -c2(x0)), max(0, -c3(x0)), max(0, -c4(x0)), max(0, -c5(x0))))
-
-    np.set_printoptions(precision=3)
-    print(f'starting point x0: {xk}, f0: {fk}')
-    print('----------------------------------')
-
-    while tau > 1e-4 or mu < 10:
-        gfunc = grad(func)
-        while g_inf >= tau and k < maxiters:
-            gk = gfunc(xk, mu)
-            pk = -gk / np.linalg.norm(gk)  # steepest-descent direction
-            sl = Step_Length_Q(func, xk, pk, mu)  # calculate step length
-            xk = sl[0]
-
-            fk = func(xk, mu)  # evaluate f at new iterate
-            g_inf = np.linalg.norm(gk, ord=np.inf)  # check first-order optimality (gradient)
-
-            k += 1
-            gQPen.append(gObj(xk))
-            xQPen.append(xk)
-            fQPen.append(fk)
-            cQPen.append(max(max(0, -c1(xk)), max(0, -c2(xk)), max(0, -c3(xk)), max(0, -c4(xk)), max(0, -c5(x0))))
-
-            print(
-                f'iteration {k} ,  function calls: {sl[2]},  alpha: {sl[1]:1.7f}, xk: {xk.squeeze()}, fk: {fk.item():2.6f}, gradient norm: {g_inf:2.6f}')
-
-        mu = mu * rho
-        tau = tau * eta
-
-        print(f'mu: {mu} , tau: {tau}')
-    return xQPen, fQPen, gQPen, cQPen
-
+    mu = 0
+    return Objective_Function(x) + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c3(x))**2 + max(0, -c4(x))**2 + max(0, -c5(x))**2)
 
 def SCIPY_SLSQP (f,x0, gk, objB) :
     def callback(x):
@@ -316,7 +208,7 @@ def SCIPY_NM (f,x0, gk, objB) :
     for i in range(len(fx)):
         xNM[i, 0] = np.concatenate(xx)[i * 2]
         xNM[i, 1] = np.concatenate(xx)[i * 2 + 1]
-        gNM[i] = np.linalg.norm(gk(xSLSQP[i, :]))
+        gNM[i] = np.linalg.norm(gk(xNM[i, :]))
         fNM[i] = fx[i]
         cNM[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]), max(0, -c5x[i]))
     return xNM, fNM, gNM, cNM
@@ -434,7 +326,117 @@ for i in range(len(xNM)):
 
 plt.plot(xxSLSQP[:, 0], xxSLSQP[:, 1], marker='o', label='SLSQP (SciPy)')
 plt.plot(xxCOB[:, 0], xxCOB[:, 1], marker='o', label='COBYLA (SciPy)')
-plt.plot(xxNM[:, 0], xxNM[:, 1], marker='o', label='Quadratic Penalty (Personal)')
+plt.plot(xxNM[:, 0], xxNM[:, 1], marker='o', label='Nelder-Mead (SciPy)')
 plt.legend()
 
 plt.show()
+
+
+# Vestigial code of my attempt to get penalty method
+
+# def Obj_pen(x,mu):
+#     return Objective_Function(x) + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c3(x))**2 + max(0, -c4(x))**2 + max(0, -c5(x))**2)
+
+
+# def Step_Length_Q (func, xk, pk, mu):
+#     k = 0
+#
+#     c1 = 1e-5
+#     alpha = 1
+#     gfunc = grad(func)
+#
+#     xt = np.zeros(2)
+#     xt[0] = xk[0] + alpha * pk[0]
+#     xt[1] = xk[1] + alpha * pk[1]
+#     fs = False
+#     while True:
+#         k += 1
+#
+#         sufDec = ((func(xk + alpha * pk, mu)) < (func(xk, mu) + c1 * alpha * jnp.dot(gfunc(xk, mu), pk)))
+#         if sufDec or (alpha < 1e-3):
+#             break
+#
+#         C = func(xk, mu)
+#         B = -np.linalg.norm(gfunc(xk, mu))
+#         alpha_i = xk + alpha * pk
+#         A = (func(alpha_i, mu) - B * alpha - C) / (alpha ** 2)
+#         alpha = -B / (2 * A)
+#
+#         print(xt)
+#
+#         xt[0] = xk[0] + alpha * pk[0]
+#         xt[1] = xk[1] + alpha * pk[1]
+#
+#         if xt[0] > 6.25:
+#             xt[0] = 6.25
+#             fs = True
+#         elif xt[0] < 3.6:
+#             xt[0] = 3.6
+#             fs = True
+#         else:
+#             xt[0] = xt[0]
+#
+#         if xt[1] > 0.5:
+#             xt[1] = 0.5
+#             fs = True
+#         elif xt[1] < np.pi/6:
+#             xt[1] = np.pi/6
+#             fs = True
+#         else:
+#             xt[1] = xt[1]
+#
+#         if fs:
+#             break
+#
+#     return [xt, alpha, k]
+#
+#
+# def Quad_Penalty (func, gObj, x0, mu, tau, eta, rho):
+#     gfunc = grad(func)
+#
+#     maxiters = 250  # maximum number of iterations
+#
+#     g_inf = np.linalg.norm(gfunc(x0, mu), ord=np.inf)  # starting gradient infinity norm
+#     k = 0  # iteration counter
+#     xk = x0  # starting point
+#     fk = func(xk, mu)
+#
+#     # empty lists to store optimization history
+#     gQPen = []  # first-order optimality
+#     gQPen.append(g_inf)
+#     xQPen = []  # iterate history
+#     xQPen.append(x0)  # include the starting point
+#     fQPen = []  # objective history
+#     fQPen.append(fk)
+#     cQPen = []
+#     cQPen.append(max(max(0, -c1(x0)), max(0, -c2(x0)), max(0, -c3(x0)), max(0, -c4(x0)), max(0, -c5(x0))))
+#
+#     np.set_printoptions(precision=3)
+#     print(f'starting point x0: {xk}, f0: {fk}')
+#     print('----------------------------------')
+#
+#     while tau > 1e-4 or mu < 10:
+#         gfunc = grad(func)
+#         while g_inf >= tau and k < maxiters:
+#             gk = gfunc(xk, mu)
+#             pk = -gk / np.linalg.norm(gk)  # steepest-descent direction
+#             sl = Step_Length_Q(func, xk, pk, mu)  # calculate step length
+#             xk = sl[0]
+#
+#             fk = func(xk, mu)  # evaluate f at new iterate
+#             g_inf = np.linalg.norm(gk, ord=np.inf)  # check first-order optimality (gradient)
+#
+#             k += 1
+#             gQPen.append(gObj(xk))
+#             xQPen.append(xk)
+#             fQPen.append(fk)
+#             cQPen.append(max(max(0, -c1(xk)), max(0, -c2(xk)), max(0, -c3(xk)), max(0, -c4(xk)), max(0, -c5(x0))))
+#
+#             print(
+#                 f'iteration {k} ,  function calls: {sl[2]},  alpha: {sl[1]:1.7f}, xk: {xk.squeeze()}, fk: {fk.item():2.6f}, gradient norm: {g_inf:2.6f}')
+#
+#         mu = mu * rho
+#         tau = tau * eta
+#
+#         print(f'mu: {mu} , tau: {tau}')
+#     return xQPen, fQPen, gQPen, cQPen
