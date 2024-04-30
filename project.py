@@ -266,11 +266,17 @@ print(init)
 gObj = grad(Objective_Function)
 
 [xSLSQP, fSLSQP, gSLSQP, cSLSQP] = SCIPY_SLSQP(Objective_Function, init, gObj, Obj_Bounds)
-
-[xNM, fNM, gNM, cNM] = SCIPY_NM(Obj_pen_NM, init, gObj, Obj_Bounds)
-
+[xNM, fNM, gNM, cNM] = SCIPY_NM(Objective_Function, init, gObj, Obj_Bounds)
 [xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(Objective_Function, init, gObj)
 
+[mfSLSQP, tfSLSQP] = totalFun([6.24999999, -0.371152])
+print('SLSQP: ', mfSLSQP, 'KG of fuel -', tfSLSQP, 'Hours till arrival on Mars')
+
+[mfNM, tfNM] = totalFun([6.2500e+00, 1.1875e-03])
+print('Nelder-Mead: ', mfNM, 'KG of fuel -', tfNM, 'Hours till arrival on Mars')
+
+[mfCOB, tfCOB] = totalFun([6.25, -0.44502963])
+print('COBYLA: ', mfCOB, 'KG of fuel -', tfCOB, 'Hours till arrival on Mars')
 
 
 #[xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(Obj_pen, gObj, init, 0.001, 1, 0.5, 2)
