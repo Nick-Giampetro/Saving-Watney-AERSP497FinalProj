@@ -122,10 +122,6 @@ def Objective_Function (x) :
     return score
 
 
-def Obj_pen_NM(x):
-    mu = 0
-    return Objective_Function(x) + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c3(x))**2 + max(0, -c4(x))**2 + max(0, -c5(x))**2)
-
 def SCIPY_SLSQP (f,x0, gk, objB) :
     def callback(x):
         xx.append(x)  # iterate xk
