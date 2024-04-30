@@ -8,10 +8,14 @@ clear all
 % delvi > 0
 % -90 < phi < 90
 
-[~, mf, tf, ti] = totalfun(3, -0.21);
+[~, mf, tf, ti] = totalfun(6.25, -0.44397247);
 
 tf = tf / 3600 ; % hours
 ti = ti / 3600 ; % hours
+
+w1 = 0.5 ;
+w2 = 1-w1 ;
+score = (w1 * mf + w2 * tf)
 
 % delVi in km/s
 % phi in rad
@@ -117,5 +121,9 @@ v2 = Ft * r0 + Gt * v0;
 
 vM = [-vM*sin(dtheta); vM*cos(dtheta)];
 delV2 = vecnorm(vM - v2);
+
+dtheta
+dt
+delV2
 
 end

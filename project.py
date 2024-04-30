@@ -12,8 +12,16 @@ from scipy.optimize import Bounds
 
 c1 = lambda x: -x[0] + 6.25
 c2 = lambda x:  x[0]
-c3 = lambda x: -x[1] + np.pi/2
-c4 = lambda x:  x[1] + np.pi/2
+c3 = lambda x: -x[1] + jnp.pi/6
+c4 = lambda x:  x[1] + jnp.pi/6
+def c5 (x):
+    rE = 149.95e6
+    rM = 228.e6
+    muS = 1.327e11
+    vE = (muS / rE) ** 0.5
+    vM = (muS / rM) ** 0.5
+
+    return (x[0]**2 + 2*x[0]*vE*jnp.cos(x[1]) + vE**2) - 2*muS/rE + 2/rM*muS
 
 
 ineq_con1 = {'type': 'ineq',
@@ -28,6 +36,9 @@ ineq_con3 = {'type': 'ineq',
 ineq_con4 = {'type': 'ineq',
              'fun': c4,
              'jac': grad(c4)}
+ineq_con5 = {'type': 'ineq',
+             'fun': c4,
+             'jac': grad(c5)}
 
 def TransferCalc (x) :
     rE = 149.95e6
@@ -54,8 +65,8 @@ def TransferCalc (x) :
 
     dtheta = thetaf - thetai
 
-    E1 = 2*jnp.arctan(((1-e)/(1+e))**0.5 * jnp.arctan(thetai/2))
-    E2 = 2*jnp.arctan(((1-e)/(1+e))**0.5 * jnp.arctan(thetaf/2))
+    E1 = 2*jnp.arctan(((1-e)/(1+e))**0.5 * jnp.tan(thetai/2))
+    E2 = 2*jnp.arctan(((1-e)/(1+e))**0.5 * jnp.tan(thetaf/2))
 
     dM = E2 - E1 + e*jnp.sin(E1) - e*jnp.sin(E2)
     dt = (a**3/muS)**0.5 * dM
@@ -68,7 +79,6 @@ def TransferCalc (x) :
     vM = jnp.array([-vM*jnp.sin(dtheta), vM*jnp.cos(dtheta), 0])
     delV2 = jnp.linalg.norm(vM - v2)
 
-
     return dtheta, dt, delV2
 
 def totalFun (x) :
@@ -77,6 +87,7 @@ def totalFun (x) :
     mstruct = 1000.
 
     [delth, delt, delV2] = TransferCalc(x)
+
 
     # 11520 = Mar 12, 2035
     t0 = 11520. * 24. * 3600.
@@ -89,35 +100,35 @@ def totalFun (x) :
 
     tf = (delth - theta0) / dw - wM / dw * delt + delt
     ti = tf - delt
-    tf = tf /3600.
+    tf = tf / 3600.
 
     delV = x[0] + delV2
 
     mc = mtotal * jnp.e**(-delV / vex) - mstruct
     mf = mtotal - mstruct - mc
 
-    return [mf, tf]
+    return mf, tf
 
 def Objective_Function (x) :
-    obj = totalFun(x)
+    [mf, tf] = totalFun(x)
     w1 = 0.5
     w2 = 1-w1
-    score = (w1 * obj[0] + w2 * obj[1])
+    score = (w1 * mf + w2 * tf)
     return score
 
 def Obj_pen(x,mu):
-    return Objective_Function(x) + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c3(x))**2 + max(0, -c4(x))**2)
+    return Objective_Function(x) + mu/2 * (max(0, -c1(x))**2 + max(0, -c2(x))**2 + max(0, -c3(x))**2 + max(0, -c4(x))**2 + max(0, -c5(x))**2)
 
 def Step_Length_Q (func, xk, pk, mu):
     k = 0
 
-    c1 = 1e-3
-    alpha = 5
+    c1 = 1e-4
+    alpha = 0.1
     gfunc = grad(func)
     while True:
         k += 1
         sufDec = ((func(xk + alpha * pk, mu)) < (func(xk, mu) + c1 * alpha * jnp.dot(gfunc(xk, mu), pk)))
-        if sufDec or (alpha < 1e-3):
+        if sufDec or (alpha < 1e-2):
             break
 
         C = func(xk, mu)
@@ -149,7 +160,7 @@ def Quad_Penalty (func, gObj, x0, mu, tau, eta, rho):
     fQPen = []  # objective history
     fQPen.append(fk)
     cQPen = []
-    cQPen.append(max(max(0, -c1(x0)), max(0, -c2(x0)), c3(x0) ** 2, max(0, -c4(x0))))
+    cQPen.append(max(max(0, -c1(x0)), max(0, -c2(x0)), max(0, -c3(x0)), max(0, -c4(x0)), max(0, -c5(x0))))
 
     np.set_printoptions(precision=3)
     print(f'starting point x0: {xk}, f0: {fk}')
@@ -168,10 +179,10 @@ def Quad_Penalty (func, gObj, x0, mu, tau, eta, rho):
             g_inf = np.linalg.norm(gk, ord=np.inf)  # check first-order optimality (gradient)
 
             k += 1
-            gQPen.append(np.linalg.norm(gObj))
+            gQPen.append(gObj(xk))
             xQPen.append(xk)
             fQPen.append(fk)
-            cQPen.append(max(max(0, -c1(xk)), max(0, -c2(xk)), max(0, -c3[i]), max(0, -c4(xk))))
+            cQPen.append(max(max(0, -c1(xk)), max(0, -c2(xk)), max(0, -c3(xk)), max(0, -c4(xk)), max(0, -c5(x0))))
 
             print(
                 f'iteration {k} ,  function calls: {sl[1]},  alpha: {alpha:1.7f}, xk: {xk.squeeze()}, fk: {fk.item():2.6f}, gradient norm: {g_inf:2.6f}')
@@ -191,7 +202,8 @@ def SCIPY_SLSQP (f,x0, gk) :
         c2x.append(ineq_con2['fun'](x))
         c3x.append(ineq_con3['fun'](x))
         c4x.append(ineq_con4['fun'](x))
-        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}, c4 {c4(x):1.7f}')
+        c5x.append(ineq_con5['fun'](x))
+        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}, c4 {c4(x):1.7f}, c5 {c5(x):1.7f}')
 
     # this will need tailored to our specific problem later
     xx = []
@@ -206,10 +218,12 @@ def SCIPY_SLSQP (f,x0, gk) :
     c3x.append(c3(x0))
     c4x = []
     c4x.append(c4(x0))
+    c5x = []
+    c5x.append(c5(x0))
 
 
     res = minimize(f, x0, method='SLSQP', jac=gk,
-                   constraints=[ineq_con1, ineq_con2, ineq_con3, ineq_con4],
+                   constraints=[ineq_con1, ineq_con2, ineq_con3, ineq_con4, ineq_con5],
                    options={'disp': True},
                    callback=callback)
 
@@ -222,7 +236,7 @@ def SCIPY_SLSQP (f,x0, gk) :
         xSLSQP[i, 1] = np.concatenate(xx)[i * 2 + 1]
         gSLSQP[i] = np.linalg.norm(gk(xSLSQP[i, :]))
         fSLSQP[i] = fx[i]
-        cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]))
+        cSLSQP[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]), max(0, -c5x[i]))
     return xSLSQP, fSLSQP, gSLSQP, cSLSQP
 
 def SCIPY_COBYLA (f,x0, gk) :
@@ -233,7 +247,8 @@ def SCIPY_COBYLA (f,x0, gk) :
         c2x.append(ineq_con2['fun'](x))
         c3x.append(ineq_con3['fun'](x))
         c4x.append(ineq_con4['fun'](x))
-        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}, c4 {c4(x):1.7f}')
+        c5x.append(ineq_con5['fun'](x))
+        print(f'xk {x}, fk {f(x):1.7f}, c1 {c1(x):1.7f}, c2 {c2(x):1.7f}, c3 {c3(x):1.7f}, c4 {c4(x):1.7f}, c5 {c5(x):1.7f}')
 
     # this will need tailored to our specific problem later
     xx = []
@@ -248,9 +263,11 @@ def SCIPY_COBYLA (f,x0, gk) :
     c3x.append(c3(x0))
     c4x = []
     c4x.append(c4(x0))
+    c5x = []
+    c5x.append(c5(x0))
 
     res = minimize(f, x0, method='COBYLA',
-                   constraints=[ineq_con1, ineq_con2, ineq_con3, ineq_con4],
+                   constraints=[ineq_con1, ineq_con2, ineq_con3, ineq_con4, ineq_con5],
                    options={'disp': True},
                    callback=cob_callback)
 
@@ -263,19 +280,17 @@ def SCIPY_COBYLA (f,x0, gk) :
         xCOB[i, 1] = np.concatenate(xx)[i * 2 + 1]
         gCOB[i] = np.linalg.norm(gk(xCOB[i, :]))
         fCOB[i] = fx[i]
-        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]))
+        cCOB[i] = max(max(0, -c1x[i]), max(0, -c2x[i]), max(0, -c3x[i]), max(0, -c4x[i]), max(0, -c5x[i]))
     return xCOB, fCOB, gCOB, cCOB
 
-init = np.array([3.,0.])
+init = np.array([4.,0.1])
 print(init)
 
-res = Objective_Function(init)
-print(res)
-
 gObj = grad(Objective_Function)
-print(gObj(init))
 
 [xSLSQP, fSLSQP, gSLSQP, cSLSQP] = SCIPY_SLSQP(Objective_Function, init, gObj)
+print
+
 [xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(Objective_Function, init, gObj)
 [xQPen, fQPen, gQPen, cQPen] = Quad_Penalty(Obj_pen, gObj, init, 0.001, 1, 0.5, 2)
 
@@ -297,7 +312,17 @@ plt.ylabel(r'$ ||\nabla $$f(x_k)||$')
 plt.title(r'$ ||\nabla $$f(x_k)||$ vs iterations')
 plt.legend()
 
+
+
+m = 30
+x1, x2 = np.meshgrid(np.linspace(3.6,6.25,m), np.linspace(-jnp.pi/6,0.5,m))
+fx = np.zeros((m,m))
+for i in range(m) :
+    for j in range(m) :
+        temp = jnp.array([x1[i,j],x2[i,j]])
+        fx[i,j] = Objective_Function(temp)
 plt.figure(figsize=(8,8))
+plt.contour(x1, x2, fx.reshape(m,m), levels=20)
 plt.xlabel(r'$x_1$')
 plt.ylabel(r'$x_2$')
 plt.title(r'Trajectory Plot')
