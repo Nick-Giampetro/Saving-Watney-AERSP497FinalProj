@@ -298,6 +298,14 @@ plt.ylabel(r'$ ||\nabla $$f(x_k)||$')
 plt.title(r'$ ||\nabla $$f(x_k)||$ vs iterations')
 plt.legend()
 
+plt.figure(figsize=(8,8))
+plt.plot(fSLSQP, marker='o', label = 'SLSQP (SciPy)')
+plt.plot(fCOB, marker='o', label = 'COBYLA (SciPy)')
+plt.plot(fNM, marker='o', label = 'Nelder-Mead (SciPy)')
+plt.xlabel('optimization iteration (k)')
+plt.ylabel('F')
+plt.title('Function Value vs iterations')
+plt.legend()
 
 m = 30
 x1, x2 = np.meshgrid(np.linspace(3, 5, m), np.linspace(-jnp.pi/6, 0.5, m))
