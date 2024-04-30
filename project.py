@@ -10,10 +10,10 @@ from scipy.optimize import minimize
 from scipy.optimize import Bounds
 
 
-c1 = lambda x: -x[0] + 6.25
+c1 = lambda x: -x[0] + 6.2558
 c2 = lambda x:  x[0]
-c3 = lambda x: -x[1] + jnp.pi/6
-c4 = lambda x:  x[1] + jnp.pi/6
+c3 = lambda x: -x[1] + jnp.pi/2
+c4 = lambda x:  x[1] + jnp.pi/2
 
 
 def c5 (x):
@@ -116,7 +116,7 @@ def totalFun (x) :
 
 def Objective_Function (x) :
     [mf, tf] = totalFun(x)
-    w1 = 0.5
+    w1 = 0.8
     w2 = 1-w1
     score = (w1 * mf + w2 * tf)
     return score
@@ -155,7 +155,7 @@ def SCIPY_SLSQP (f,x0, gk, objB) :
 
     res = minimize(f, x0, method='SLSQP', jac=gk,
                    constraints=[ineq_con1, ineq_con2, ineq_con3, ineq_con4, ineq_con5],
-                   options={'disp': True},
+                   options={'disp': True, 'eps': 0.01},
                    bounds=objB, callback=callback)
 
     xSLSQP = np.zeros((len(fx), 2))
@@ -242,7 +242,7 @@ def SCIPY_COBYLA (f, x0, gk) :
 
     res = minimize(f, x0, method='COBYLA',
                    constraints=[ineq_con1, ineq_con2, ineq_con3, ineq_con4, ineq_con5],
-                   options={'disp': True},
+                   options={'disp': True, 'rhobeg': 0.1},
                    callback=cob_callback)
 
     xCOB = np.zeros((len(fx), 2))
@@ -258,8 +258,8 @@ def SCIPY_COBYLA (f, x0, gk) :
     return xCOB, fCOB, gCOB, cCOB
 
 
-init = np.array([4.,0])
-Obj_Bounds = Bounds([3.6, -jnp.pi/6], [6.25, 0.5])
+init = np.array([3.5, 0])
+Obj_Bounds = Bounds([3, -jnp.pi/6], [5, 0.5])
 
 print(init)
 
@@ -269,13 +269,14 @@ gObj = grad(Objective_Function)
 [xNM, fNM, gNM, cNM] = SCIPY_NM(Objective_Function, init, gObj, Obj_Bounds)
 [xCOB, fCOB, gCOB, cCOB] = SCIPY_COBYLA(Objective_Function, init, gObj)
 
-[mfSLSQP, tfSLSQP] = totalFun([6.24999999, -0.371152])
+print
+[mfSLSQP, tfSLSQP] = totalFun([3.00000011, 0.17758831])
 print('SLSQP: ', mfSLSQP, 'KG of fuel -', tfSLSQP, 'Hours till arrival on Mars')
 
-[mfNM, tfNM] = totalFun([6.2500e+00, 1.1875e-03])
+[mfNM, tfNM] = totalFun([3., 0.00354605])
 print('Nelder-Mead: ', mfNM, 'KG of fuel -', tfNM, 'Hours till arrival on Mars')
 
-[mfCOB, tfCOB] = totalFun([6.25, -0.44502963])
+[mfCOB, tfCOB] = totalFun([3.03490816, -0.01759507])
 print('COBYLA: ', mfCOB, 'KG of fuel -', tfCOB, 'Hours till arrival on Mars')
 
 
@@ -303,7 +304,7 @@ plt.legend()
 
 
 m = 30
-x1, x2 = np.meshgrid(np.linspace(3.6, 6.25, m), np.linspace(-jnp.pi/6, 0.5, m))
+x1, x2 = np.meshgrid(np.linspace(3, 5, m), np.linspace(-jnp.pi/6, 0.5, m))
 fx = np.zeros((m, m))
 for i in range(m):
     for j in range(m):

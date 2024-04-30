@@ -8,12 +8,12 @@ clear all
 % delvi > 0
 % -90 < phi < 90
 
-[~, mf, tf, ti] = totalfun(6.25, -0.44397247);
+[~, mf, tf, ti] = totalfun(3, 0);
 
 tf = tf / 3600 ; % hours
 ti = ti / 3600 ; % hours
 
-w1 = 0.5 ;
+w1 = 1 ;
 w2 = 1-w1 ;
 score = (w1 * mf + w2 * tf)
 
